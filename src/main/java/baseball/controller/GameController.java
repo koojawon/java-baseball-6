@@ -1,47 +1,65 @@
 package baseball.controller;
 
-import baseball.model.GameModel;
-import baseball.view.GameView;
+import baseball.model.Answer;
+import baseball.model.CompareDto;
+import baseball.view.interfaces.InputView;
+import baseball.view.interfaces.OutputView;
+import java.util.List;
 
 public class GameController {
-    private static final GameModel gameModel = new GameModel();
-    private static final GameView gameView = new GameView();
 
+    private static final String RETRY = "1";
+    private static final String QUIT = "2";
+    private static final int END_STRIKE_COUNT = 3;
+    private final OutputView outputView;
+    private final InputView inputView;
+    private final Answer answer;
 
-    public void guessInputController() {
-        String s = gameView.guessInputView();
-        gameModel.setGuess(s);
+    public GameController(InputView inputView, OutputView outputView) {
+        this.outputView = outputView;
+        this.inputView = inputView;
+        this.answer = new Answer();
     }
 
-    public boolean retryInputController() {
-        String s = gameView.restartInputView();
-        return switch (s) {
-            case "1" -> true;
-            case "2" -> false;
-            default -> throw new IllegalArgumentException();
-        };
+    public boolean getRetry() {
+        String s = inputView.getRestart();
+        System.out.println(s);
+        if (s.equals(RETRY)) {
+            return true;
+        }
+        if (s.equals(QUIT)) {
+            return false;
+        }
+        throw new IllegalArgumentException("Wrong Input!!");
     }
 
-    public void hintController() {
-        StringBuilder s = gameModel.getHint();
-        gameView.hintView(s);
+    public void printWelcome() {
+        outputView.printWelcome();
     }
 
-    public void gameStart() {
+    public void generateAnswer() {
+        answer.generateAnswer();
+    }
+
+    public void tryGuess() {
+        List<Integer> s;
+        CompareDto compareResult;
         do {
+            s = inputView.getGuess();
+            compareResult = answer.compareAnswer(s);
+            printHint(compareResult);
+        } while (checkGameEnd(compareResult));
+    }
 
-            gameView.gameStartView();
-            gameModel.generateAnswer();
+    private boolean checkGameEnd(CompareDto compareDto) {
+        return compareDto.getStrike() != END_STRIKE_COUNT;
+    }
 
-            do {
-                gameModel.resetCount();
-                guessInputController();
-
-                gameModel.checkAnswer();
-
-                hintController();
-            } while (gameModel.getStrike() != 3);
-
-        } while (retryInputController());
+    private void printHint(CompareDto compareDto) {
+        if ((compareDto.getStrike() | compareDto.getBall()) == 0) {
+            outputView.printNothing();
+            return;
+        }
+        outputView.printHint(compareDto);
     }
 }
